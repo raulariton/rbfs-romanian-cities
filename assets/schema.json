@@ -1,0 +1,49 @@
+{
+    "type": "object",
+    "description": "adjacencyMatrix",
+    "properties": {
+        "adjacencyMatrix": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "nodeName": {
+                        "type": "string"
+                    },
+                    "adjacencyRow": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    }
+                },
+                "required": [
+                    "nodeName",
+                    "adjacencyRow"
+                ]
+            }
+        },
+        "heuristics": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "nodeName": {
+                        "type": "string"
+                    },
+                    "heuristicValue": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                      "nodeName",
+                      "heuristicValue"
+                ]
+            }
+        }
+    },
+    "required": [
+        "adjacencyMatrix",
+        "heuristics"
+    ]
+}
