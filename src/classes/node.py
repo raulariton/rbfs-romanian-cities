@@ -3,9 +3,6 @@ from src.classes.problem import Problem
 class Node:
     """This class represents a node in the RBFS tree."""
 
-    # TODO: Some fields are not necessary and can be simply obtained with a method call
-    #  look into which ones can be removed without affecting the program's running time
-    #  i.e. without having to compute the same thing multiple times
     def __init__(self, state: str, problem: Problem, predecessor = None, f_limit: float = 0):
         """
         Create a Node object
@@ -30,7 +27,11 @@ class Node:
         # to be retrieved by database on demand
         self.heuristic = None
 
-    # def load_neighbours(self):
+    def __str__(self):
+        return f"{self.state}"
+
+    def __repr__(self):
+        return f"{self.state}"
 
     def get_cost(self) -> int:
         """

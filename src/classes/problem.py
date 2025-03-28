@@ -1,8 +1,6 @@
 import src.utils.db_util as db
 from bidict import bidict as bidirectional_dict
 
-MAX_NODES_IN_MEMORY = 5
-
 # TODO:
 #  Have MAX_NODES_IN_MEMORY as an attribute
 #  Have a list of active nodes in memory
@@ -26,6 +24,10 @@ class Problem:
         self.initial_state = initial_state
         self.goal_state = goal_state
         self.graph_name_in_database = graph_name_in_database
+
+        # initialize list to track nodes in memory
+        self.MAX_NODES_IN_MEMORY = 5
+        self.nodes_in_memory = []
 
         # create a node ordering, based on the given
         # adjacency list in the database
@@ -59,3 +61,15 @@ class Problem:
 
         return db.get_adjacency_list(node_state, self.graph_name_in_database)
 
+    def insert_node_in_memory(self, node):
+
+        if len(self.nodes_in_memory) == self.MAX_NODES_IN_MEMORY:
+            # prune
+
+            # sort the nodes in memory by their f_values
+            self.nodes_in_memory.sort(key=lambda x: x.f_value)
+
+            # prune (remove) the node with the highest f_value (last node in list)
+            self.nodes_in_memory.pop()
+
+        self.nodes_in_memory.append(node)

@@ -9,6 +9,10 @@ def recursive_best_first_search(problem: prb.Problem) -> Node:
                         problem=problem,
                         predecessor=None,
                         f_limit=INFINITY)
+
+    # add node to list of nodes in memory
+    problem.insert_node_in_memory(initial_node)
+
     initial_node.f_value = initial_node.get_heuristic()
 
     return rbfs(problem,
@@ -29,7 +33,7 @@ def rbfs(problem: prb.Problem, node: Node) -> (Node, int):
 
     while True:
 
-        # sort the successors by their f values
+        # sort the successors by their f_values
         successors.sort(key=lambda x: x.f_value)
 
         best_successor = successors[0]
@@ -65,6 +69,7 @@ def expand(node: Node, problem: prb.Problem) -> list[Node]:
     for i in range(len(adjacency_list)):
         if adjacency_list[i] != 0:
             successor = Node(state=problem.index_of_node_state.inverse[i], problem=problem, predecessor=node)
+            problem.insert_node_in_memory(successor)
             successor.f_value = max(successor.get_cost() + successor.get_heuristic(),
                                     node.f_value)
             successors.append(successor)

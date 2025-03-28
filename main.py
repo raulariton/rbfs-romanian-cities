@@ -6,7 +6,7 @@ import json
 if __name__ == '__main__':
 
     try:
-        problem = Problem("A", "G", "test_graph")
+        problem = Problem("Arad", "Bucharest", "romanian_cities_graph")
         recursive_best_first_search(problem)
     except Exception as e:
         print(f"Error occurred: {e}")

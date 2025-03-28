@@ -79,26 +79,16 @@ def get_node_list(graph_name: str) -> list[str]:
     except db.Error as error:
         raise error
 
-def insert_graph(data: str, name: str = None, ) -> None:
+def insert_graph(data: dict, name: str) -> None:
     """
-    Insert a graph into the database.
+    Insert a graph, defined by the JSON in ``data``, with the name ``name`` into the database.
     """
-
-    # TODO: Remove absolute path
-    schema = json.loads(
-        open(r'../../assets/schema.json').read())
-
-    try:
-        schema_validator.validate(json.loads(data), schema)
-    except schema_validator.ValidationError as error:
-        print(f"Invalid JSON: {error.message}")
-        print(f"Aborting database insertion.")
-        return
 
     try:
         with db.connect(DATABASE_NAME) as connection:
             cursor = connection.cursor()
-            cursor.execute("INSERT INTO graphs (name, data) VALUES (?, ?)", (name, data))
+            cursor.execute("INSERT INTO graphs (name, data) VALUES (?, ?)",
+                           (name, json.dumps(data)))
             connection.commit()
 
     except db.Error as error:
