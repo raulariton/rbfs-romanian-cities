@@ -31,12 +31,12 @@ class Problem:
 
         # create a node ordering, based on the given
         # adjacency list in the database
-        self.index_of_node_state = bidirectional_dict()
+        self.index_by_node_state = bidirectional_dict()
         node_states = db.get_node_list(graph_name_in_database)
 
         i = 0
         for node_state in node_states:
-            self.index_of_node_state[node_state] = i
+            self.index_by_node_state[node_state] = i
             i += 1
 
     def get_weight(self, node1_state: str, node2_state: str) -> int:
@@ -45,7 +45,7 @@ class Problem:
         """
         node1_adjacency_list = self.get_adjacency_list(node1_state)
 
-        return node1_adjacency_list[self.index_of_node_state[node2_state]]
+        return node1_adjacency_list[self.index_by_node_state[node2_state]]
 
     def get_heuristic(self, node_state: str) -> int:
         """
@@ -73,3 +73,16 @@ class Problem:
             self.nodes_in_memory.pop()
 
         self.nodes_in_memory.append(node)
+
+    def get_edges_and_weight(self) -> dict[tuple, int]:
+
+        weight_of_edge = {}
+
+        for (node_state, index) in self.index_by_node_state.items():
+            for (j, weight) in enumerate(self.get_adjacency_list(node_state)):
+                if weight != 0:
+                    edge_tuple = tuple(sorted((node_state, self.index_by_node_state.inverse[j])))
+                    if edge_tuple not in weight_of_edge.keys():
+                        weight_of_edge[edge_tuple] = weight
+
+        return weight_of_edge

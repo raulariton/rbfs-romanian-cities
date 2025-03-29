@@ -22,7 +22,14 @@ def rbfs(problem: prb.Problem, node: Node) -> (Node, int):
     # base case: is the given node the goal state?
     if node.state == problem.goal_state:
         print(f"{node.state} ")
+        yield node
         return (node, 0)
+
+    yield f"Now expanding node \"{node.state}\""
+    # yield the current node
+    yield node
+    # this should highlight only the path between current node and predecessor node
+    # and clear any other highlighted paths
 
     # Expand the node and get its successors
     successors = expand(node, problem)
@@ -39,6 +46,7 @@ def rbfs(problem: prb.Problem, node: Node) -> (Node, int):
         best_successor = successors[0]
 
         if best_successor.f_value > node.f_limit:
+            yield FAILURE
             return (FAILURE, best_successor.f_value)
 
         # second best
@@ -47,10 +55,11 @@ def rbfs(problem: prb.Problem, node: Node) -> (Node, int):
         best_successor.f_limit = min(node.f_limit, alternative.f_value)
 
         # recursive call
-        (result, best_successor.f_value) = rbfs(problem, best_successor)
+        (result, best_successor.f_value) = yield from rbfs(problem, best_successor)
 
         if result != FAILURE:
             print(f"{node.state} ")
+            yield node
             return (result, node.f_limit)
 
 
@@ -68,10 +77,12 @@ def expand(node: Node, problem: prb.Problem) -> list[Node]:
 
     for i in range(len(adjacency_list)):
         if adjacency_list[i] != 0:
-            successor = Node(state=problem.index_of_node_state.inverse[i], problem=problem, predecessor=node)
+            successor = Node(state=problem.index_by_node_state.inverse[i], problem=problem, predecessor=node)
             problem.insert_node_in_memory(successor)
             successor.f_value = max(successor.get_cost() + successor.get_heuristic(),
                                     node.f_value)
             successors.append(successor)
+
+            yield successor
 
     return successors
