@@ -88,6 +88,23 @@ class ProblemState:
 
         self.highlighted[(node.state,)] = Color.GRAY
 
+    def set_node_goal(self):
+        # delete any previous goal (green) highlights
+        self.highlighted = {k: v for k, v in self.highlighted.items() if v != Color.GREEN}
+
+        # delete alternate successor (blue) highlights
+        self.highlighted = {k: v for k, v in self.highlighted.items() if v != Color.BLUE}
+
+        # redraw the path in dark green
+        self.highlighted = {k: v for k, v in self.highlighted.items() if v != Color.DARK_GREEN}
+
+        iterator = self.current_path[-1]
+        while iterator.predecessor is not None:
+            self.highlighted[(iterator.state,)] = Color.DARK_GREEN
+            self.highlighted[(iterator.predecessor.state, iterator.state)] = Color.DARK_GREEN
+            self.highlighted[(iterator.predecessor.state,)] = Color.DARK_GREEN
+            iterator = iterator.predecessor
+
     def set_node_best_successor(self, best_successor):
 
         # delete any previous successor (orange) node and edge highlights

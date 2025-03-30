@@ -28,15 +28,11 @@ def rbfs(problem: Problem, node: Node) -> (Node, int):
     # base case: is the given node the goal state?
     if node.state == problem.goal_state:
 
-        # TODO: need a method separate for goal node
-        problem_state.set_node_no_successors(node)
+        problem_state.current_path.append(node)
+        problem_state.set_node_goal()
         yield problem_state
 
         return (node, 0)
-
-    if node.state == "Rimnicu Vilcea":
-        pass
-
 
     # add the node to the current path
     problem_state.current_path.append(node)
