@@ -18,6 +18,8 @@ class Node:
         self.predecessor = predecessor
         self.problem = problem
         self.f_limit = f_limit
+        self.best_successor = None
+        self.alternative_successor = None
 
         self.f_value = None
 
