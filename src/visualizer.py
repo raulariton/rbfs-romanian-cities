@@ -10,6 +10,7 @@ import random
 import json
 
 from src.algorithms.recursive_best_first_search import recursive_best_first_search, FAILURE
+from src.classes.edge import Edge
 
 WINDOW_WIDTH = round(927*1.75)
 WINDOW_HEIGHT = round(695*1.75)
@@ -22,6 +23,8 @@ class Visualizer:
 
         self.paused = True
         self.problem = problem
+        self.rbfs_generator = None
+        self.extensions = 0
 
         # load node positions
         node_canvas_data = json.loads(open(node_canvas_data_file).read())
@@ -140,12 +143,16 @@ class Visualizer:
         """
         if self.started:
             self.paused = not self.paused
+            print("Paused" if self.paused else "Playing")
             self.play_button.config(text="Play" if self.paused else "Pause")
+            if not self.paused:
+                self.animate(self.rbfs_generator)
         else:
             self.started = True
             self.paused = False
             self.play_button.config(text="Pause")
-            self.animate(recursive_best_first_search(self.problem))
+            self.rbfs_generator = recursive_best_first_search(self.problem)
+            self.animate(self.rbfs_generator)
 
     def highlight_node(self, node_state, color="red", tag="node"):
         """
@@ -259,6 +266,8 @@ class Visualizer:
 
     def animate(self, rbfs_generator):
 
+        next_wait_time_ms = 2000
+
         if self.paused:
             return # do nothing (pause)
 
@@ -267,152 +276,56 @@ class Visualizer:
             yielded = next(rbfs_generator)
 
             if yielded == FAILURE:
-                # TODO: backtracking?
-                # potentially clear current_node_highlight tagged nodes
-                print("Failure, no solution found.")
-                return
+                next_wait_time_ms = 2000
 
-            if type(yielded) is str:
+                # clear potential_edge_highlight tagged edges
+                self.graph_canvas.delete("potential_edge_highlight")
+                # clear current_node_highlight tagged nodes
+                self.graph_canvas.delete("current_node_highlight")
+
+                # clear previous path edge highlights
+                self.graph_canvas.delete(f"path_edge_highlight (extension {self.extensions})")
+                self.extensions -= 1
+
+            elif type(yielded) is str:
                 self.set_narration_text(yielded)
+                # less time for messages
+                next_wait_time_ms = 1000
+            elif type(yielded) is Edge:
+                next_wait_time_ms = 1000
+                self.highlight_edge(yielded.u.state, yielded.v.state,
+                                    color="orange",
+                                    tag="potential_edge_highlight")
             else: # yielded a node
-
-                # check if goal node reached
-                if yielded.state == self.problem.goal_state:
-                    print("Goal state reached.")
-                    self.highlight_node(yielded.state, color="green")
-                    return
+                next_wait_time_ms = 2000
 
                 # highlight current node
                 self.highlight_node(yielded.state, color="orange", tag="current_node_highlight")
                 # clear all potential edges highlighted
                 self.graph_canvas.delete("potential_edge_highlight")
+
+                # highlight the predecessor node as part of the path
+                if yielded.predecessor is not None:
+                    self.highlight_node(yielded.state, color="green",
+                                        tag=f"path_node_highlight (extension {self.extensions})")
+                else:
+                    # color the initial node with green since it will be part of the final path
+                    self.highlight_node(yielded.state, color="green", tag="initial_node_highlight")
+
+
                 # highlight the edge between the current node and its predecessor
                 if yielded.predecessor is not None:
-                    self.highlight_edge(yielded.state, yielded.predecessor.state, color="orange")
+                    self.extensions += 1
+                    self.highlight_edge(yielded.state, yielded.predecessor.state, color="orange",
+                                        tag=f"path_edge_highlight (extension {self.extensions})")
 
             if not self.paused:
-                self.window.after(2000, lambda: self.animate(rbfs_generator))
+                self.window.after(next_wait_time_ms, lambda: self.animate(rbfs_generator))
 
         except StopIteration:
-            print("Algorithm finished.")
+            self.set_narration_text("Algorithm finished. Press the start button to restart.")
+            self.play_button.config(text="Start")
+            self.paused = True
+            self.started = False
+            self.rbfs_generator = None
             return
-
-
-
-
-    '''
-    # chatgpt answer
-    def draw_graph(self):
-        """Draw the graph with nodes and edges."""
-        self.canvas.delete("all")  # Clear canvas before redrawing
-
-        # Draw edges (roads)
-        for u, v in self.graph.edges:
-            x1, y1 = self.positions[u]
-            x2, y2 = self.positions[v]
-            self.canvas.create_line(x1, y1, x2, y2, fill="black", width=2)
-            weight = self.graph[u][v]['weight']
-            mid_x, mid_y = (x1 + x2) // 2, (y1 + y2) // 2
-            self.canvas.create_text(mid_x, mid_y, text=str(weight), font=("Arial", 10))
-
-        # Draw nodes (cities)
-        for node, (x, y) in self.positions.items():
-            self.canvas.create_oval(x - 15, y - 15, x + 15, y + 15, fill="lightgray", outline="black",
-                                    width=2)
-            self.canvas.create_text(x, y, text=node, font=("Arial", 12))
-
-    # stefan answer
-    def plotPoint(city, canvas, color="blue", size=12):
-        # Compute the coordinates relative to the canvas center
-        canvas_x = CENTER_X + city.x * MULTIPLIER
-        canvas_y = CENTER_Y - city.y * MULTIPLIER
-
-        canvas.create_oval(canvas_x + size / 2, canvas_y + size / 2, canvas_x - size / 2, canvas_y - size / 2,
-                           fill=color)
-        canvas.create_text(canvas_x - 10, canvas_y - 15, text=city.getName())
-        canvas.create_text(canvas_x - 20, canvas_y + 20, text=city.fScore)
-
-    def plotCityPoints(cities, canvas):
-        for city in cities.values():
-            plotPoint(city, canvas)
-
-    def drawLine(city1, city2, canvas, color="black", width=1):
-        canvas_x1 = CENTER_X + city1.x * MULTIPLIER
-        canvas_y1 = CENTER_Y - city1.y * MULTIPLIER
-        canvas_x2 = CENTER_X + city2.x * MULTIPLIER
-        canvas_y2 = CENTER_Y - city2.y * MULTIPLIER
-
-        canvas.create_line(canvas_x1, canvas_y1, canvas_x2, canvas_y2, fill=color, width=width)
-
-    def plotCityConnections(connections, canvas):
-
-        for city in connections:
-            for connection in connections[city]:
-                drawLine(city, connection, canvas)
-
-    def drawCurrentPath(path, canvas):
-        for i in range(1, len(path)):
-            drawLine(path[i - 1], path[i], canvas, color="blue", width=2)
-
-    def visualiser(generator, canvas, cities, connections):
-        # This will update the canvas at each step.
-
-        try:
-            arg1, arg2, arg3 = next(generator)  # Get the next step in the algorithm
-            # Codes: arg1 = None => arg2 is a path to be drawn
-            #   arg2 = None => algorithm finished.
-            #   else: arg1 = current point, arg2 = neighbor
-            #   arg3 is used to draw the shortest path known so far
-
-            canvas.delete("all")
-            plotCityConnections(connections, canvas)
-            plotCityPoints(cities, canvas)
-
-            if arg2 is None:
-                # Get in this case when the A* is done with a path.
-                for i in range(1, len(arg1)):
-                    drawLine(arg1[i - 1], arg1[i], canvas, color="green", width=3)
-                print("A* Algorithm Finished!")
-                return
-
-
-            elif arg1 is None:
-                # This draws the path
-                drawCurrentPath(arg2, canvas)
-
-            else:
-
-                plotPoint(arg1, canvas, color="yellow")
-                drawCurrentPath(arg3, canvas)
-                drawLine(arg1, arg2, canvas, "red", 3)
-
-            canvas.after(1000, visualiser, generator, canvas, cities, connections)
-
-        except StopIteration:
-
-            print("A* Algorithm Finished!")
-
-    # Helper functions
-    def modifyDistanceByPercentage(percentage):
-        # relative to 0,0
-        with open('Heuristics.csv', 'r', newline='\n') as csv_file:
-            reader = csv.reader(csv_file)
-            for row in reader:
-                new_row = row[0] + "," + row[1] + "," + str(float(row[2]) * percentage) + "," + str(
-                    float(row[3]) * percentage)
-                print(new_row)
-
-    def shiftPositionOnAxis(axis, distance):
-        if axis == 'x' or axis == 'X':
-            with open('Heuristics.csv', 'r', newline='\n') as csv_file:
-                reader = csv.reader(csv_file)
-                for row in reader:
-                    new_row = row[0] + "," + row[1] + "," + str(float(row[2]) + distance) + "," + row[3]
-                    print(new_row)
-        if axis == 'y' or axis == 'Y':
-            with open('Heuristics.csv', 'r', newline='\n') as csv_file:
-                reader = csv.reader(csv_file)
-                for row in reader:
-                    new_row = row[0] + "," + row[1] + "," + row[2] + "," + str(float(row[3]) + distance)
-                    print(new_row)
-    '''
