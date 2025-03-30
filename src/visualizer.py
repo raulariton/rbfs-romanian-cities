@@ -9,6 +9,8 @@ import ctypes
 import random
 import json
 
+from src.classes.problem_state import Color
+
 from src.algorithms.recursive_best_first_search import recursive_best_first_search, FAILURE
 from src.classes.edge import Edge
 
@@ -107,6 +109,7 @@ class Visualizer:
             background=self.narration_box["background"],
         )
         self.nodes_view_frame.grid(row=1, column=0, sticky="nsew")
+        self.nodes_view_frame.rowconfigure(0, weight=1) # single row
 
         self.play_button = tk.Button(
             self.bottom_frame,
@@ -151,37 +154,39 @@ class Visualizer:
             self.started = True
             self.paused = False
             self.play_button.config(text="Pause")
+            self.clear_highlights()
             self.rbfs_generator = recursive_best_first_search(self.problem)
             self.animate(self.rbfs_generator)
 
-    def highlight_node(self, node_state, color="red", tag="node"):
+    def highlight_node(self, node_state, color: Color, tag: str):
         """
         Highlight a node on the graph canvas.
         """
 
         x, y = self.node_positions[node_state]["x"], self.node_positions[node_state]["y"]
 
-        self.draw_node(x, y, node_state, outline=color, tag=tag)
-        logger.info(f"Highlighting node {node_state}")
+        self.draw_node(
+            x, y,
+            node_state,
+            outline=color.value,
+            width=10,
+            tag=tag
+        )
 
-        self.main_frame.update()
-
-    def highlight_edge(self, u, v, color="red", tag="edge"):
+    def highlight_edge(self, u_state, v_state, color: Color, tag: str):
         """
         Highlight an edge on the graph canvas.
         """
 
-        x1, y1 = self.node_positions[u]["x"], self.node_positions[u]["y"]
-        x2, y2 = self.node_positions[v]["x"], self.node_positions[v]["y"]
+        x1, y1 = self.node_positions[u_state]["x"], self.node_positions[u_state]["y"]
+        x2, y2 = self.node_positions[v_state]["x"], self.node_positions[v_state]["y"]
 
         self.graph_canvas.create_line(
             x1, y1, x2, y2,
-            fill=color,
-            width=3,
+            fill=color.value,
+            width=10,
             tags=tag
         )
-
-        self.main_frame.update()
 
     def set_narration_text(self, text):
         """
@@ -189,7 +194,6 @@ class Visualizer:
         """
 
         self.narration_text["text"] = text
-        self.main_frame.update()
 
     def center(self):
         """ gets the coordinates of the center of the screen """
@@ -231,7 +235,7 @@ class Visualizer:
                         ((self.node_positions[u]["y"] + self.node_positions[v]["y"]) // 2))
         self.draw_label_with_background(mid_x, mid_y, str(weight), tag="weight_label", font_size=6)
 
-    def draw_node(self, x, y, name, outline="black", tag="node"):
+    def draw_node(self, x, y, name, outline="black", width=3, tag="node"):
 
         self.graph_canvas.create_oval(
             x-15,
@@ -240,7 +244,7 @@ class Visualizer:
             y+15,
             fill=NODE_COLOR,
             outline=outline,
-            width=2,
+            width=width,
             tags=tag
         )
         self.draw_label_with_background(x, y+30, name)
@@ -264,6 +268,59 @@ class Visualizer:
             tags=tag
         )
 
+    def update_window(self, problem_state):
+
+        # clear all previous highlights
+        self.clear_highlights()
+
+        # iterate in problem_state.highlighted
+        for node_state_tuple, color in problem_state.highlighted.items():
+            # highlight elements with dark green
+            if color == Color.DARK_GREEN:
+                if len(node_state_tuple) == 1:
+                    self.highlight_node(node_state_tuple[0], color, tag="expanded_node_highlight")
+                else:
+                    self.highlight_edge(node_state_tuple[0], node_state_tuple[1], color, tag="path_highlight")
+
+            # highlight elements with orange
+            elif color == Color.ORANGE:
+                if len(node_state_tuple) == 1:
+                    self.highlight_node(node_state_tuple[0], color, tag="successor_highlight")
+                else:
+                    self.highlight_edge(node_state_tuple[0], node_state_tuple[1], color,
+                                        tag="successor_edge_highlight")
+
+            elif color == Color.GRAY:
+                self.highlight_node(node_state_tuple[0], color, tag="no_successors_highlight")
+
+            elif color == Color.GREEN:
+                if len(node_state_tuple) == 1:
+                    self.highlight_node(node_state_tuple[0], color, tag="best_successor_highlight")
+                else:
+                    self.highlight_edge(node_state_tuple[0], node_state_tuple[1],
+                                        color,
+                                        tag="best_successor_edge_highlight")
+
+            elif color == Color.BLUE:
+                self.highlight_node(node_state_tuple[0], color, tag="alternative_successor_highlight")
+
+        # have node outlines on top
+        self.graph_canvas.tag_raise("expanded_node_highlight")
+        self.graph_canvas.tag_raise("successor_highlight")
+        self.graph_canvas.tag_raise("no_successors_highlight")
+        self.graph_canvas.tag_raise("best_successor_highlight")
+        self.graph_canvas.tag_raise("alternative_successor_highlight")
+
+        # have edge and node labels on top
+        self.graph_canvas.tag_raise("weight_label")
+        self.graph_canvas.tag_raise("label")
+
+        # update displayed message
+        self.set_narration_text(problem_state.displayed_message)
+
+        # display nodes in memory
+        self.display_nodes_in_memory(problem_state.in_memory_nodes)
+
     def animate(self, rbfs_generator):
 
         next_wait_time_ms = 2000
@@ -272,52 +329,10 @@ class Visualizer:
             return # do nothing (pause)
 
         try:
-            # generator yields a node or a message string
-            yielded = next(rbfs_generator)
+            # generator yields a problem state
+            problem_state = next(rbfs_generator)
 
-            if yielded == FAILURE:
-                next_wait_time_ms = 2000
-
-                # clear potential_edge_highlight tagged edges
-                self.graph_canvas.delete("potential_edge_highlight")
-                # clear current_node_highlight tagged nodes
-                self.graph_canvas.delete("current_node_highlight")
-
-                # clear previous path edge highlights
-                self.graph_canvas.delete(f"path_edge_highlight (extension {self.extensions})")
-                self.extensions -= 1
-
-            elif type(yielded) is str:
-                self.set_narration_text(yielded)
-                # less time for messages
-                next_wait_time_ms = 1000
-            elif type(yielded) is Edge:
-                next_wait_time_ms = 1000
-                self.highlight_edge(yielded.u.state, yielded.v.state,
-                                    color="orange",
-                                    tag="potential_edge_highlight")
-            else: # yielded a node
-                next_wait_time_ms = 2000
-
-                # highlight current node
-                self.highlight_node(yielded.state, color="orange", tag="current_node_highlight")
-                # clear all potential edges highlighted
-                self.graph_canvas.delete("potential_edge_highlight")
-
-                # highlight the predecessor node as part of the path
-                if yielded.predecessor is not None:
-                    self.highlight_node(yielded.state, color="green",
-                                        tag=f"path_node_highlight (extension {self.extensions})")
-                else:
-                    # color the initial node with green since it will be part of the final path
-                    self.highlight_node(yielded.state, color="green", tag="initial_node_highlight")
-
-
-                # highlight the edge between the current node and its predecessor
-                if yielded.predecessor is not None:
-                    self.extensions += 1
-                    self.highlight_edge(yielded.state, yielded.predecessor.state, color="orange",
-                                        tag=f"path_edge_highlight (extension {self.extensions})")
+            self.update_window(problem_state)
 
             if not self.paused:
                 self.window.after(next_wait_time_ms, lambda: self.animate(rbfs_generator))
@@ -329,3 +344,55 @@ class Visualizer:
             self.started = False
             self.rbfs_generator = None
             return
+
+    def display_nodes_in_memory(self, in_memory_nodes):
+        """
+        Display the nodes in memory.
+        """
+
+        # clear the previous nodes in memory
+        for widget in self.nodes_view_frame.winfo_children():
+            widget.destroy()
+
+        # display the nodes in memory
+        for i, tup in enumerate(in_memory_nodes):
+            node = tup[0]
+
+            if tup[1] == None:
+                node_label = tk.Label(
+                    self.nodes_view_frame,
+                    text=f"{node.state}",
+                    font=("Inter Bold", 12),
+                    padx=0,
+                    background=self.narration_box["background"]
+                )
+            else:
+                node_label = tk.Label(
+                    self.nodes_view_frame,
+                    text=f"{node.state} {tup[1]}",
+                    font=("Inter Bold", 8),
+                    padx=0,
+                    background=self.narration_box["background"]
+                )
+            node_label.grid(row=0, column=i)
+
+            self.nodes_view_frame.columnconfigure(i, weight=1)
+
+
+    def clear_highlights(self):
+        # the green highlight of the expanded nodes
+        self.graph_canvas.delete("expanded_node_highlight")
+        # the green highlight of the edges between the initial node and the expanded node
+        self.graph_canvas.delete("path_highlight")
+        # the orange highlight of a successor node
+        self.graph_canvas.delete("successor_highlight")
+        # the orange highlight of the edge between the current node and its successor
+        self.graph_canvas.delete("successor_edge_highlight")
+        # the gray highlight of a node with no successors
+        self.graph_canvas.delete("no_successors_highlight")
+        # the green highlight of the best successor node
+        self.graph_canvas.delete("best_successor_highlight")
+        # the green highlight of the edge between the current node and the best successor
+        self.graph_canvas.delete("best_successor_edge_highlight")
+        # the blue highlight of the alternative successor node
+        self.graph_canvas.delete("alternative_successor_highlight")

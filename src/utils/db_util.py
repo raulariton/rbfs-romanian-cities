@@ -6,9 +6,6 @@ DATABASE_NAME = 'rbfs_romanian_cities.db'
 
 # def get_node_neighbours(node: Node) -> list[int]:
 
-# TODO: Make Node to have a reference to a Problem object
-#  (so the name of the graph corresponding to the problem
-#  can be accessed)
 def get_heuristic(node_state: str, graph_name: str) -> int:
     """
     Returns the heuristic value of the node with state ``node_state``

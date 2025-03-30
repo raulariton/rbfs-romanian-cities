@@ -12,9 +12,6 @@ class Node:
         :param f_limit: The f_limit of the node.
         """
         self.state = state
-
-        # NOTE: may need to store only the state of the predecessor
-        #  considering limitation on max number of nodes in memory
         self.predecessor = predecessor
         self.problem = problem
         self.f_limit = f_limit
