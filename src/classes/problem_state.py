@@ -150,32 +150,16 @@ class ProblemState:
             for i in range(len(self.in_memory_nodes)):
                 # if the node is not highlighted green
                 # (i.e. if is not part of the possible optimal/final path)
-                if not self.is_part_of_path(self.in_memory_nodes[i][0]):
+                if self.in_memory_nodes[i][0] not in self.current_path:
                     # it can be pruned (removed from list and thus memory)
                     # to allow for `node` to be inserted
 
-                    # debug print
-                    print(f"Pruning node \"{self.in_memory_nodes[i][0].state}\" "
-                          f"(with {sys.getrefcount(self.in_memory_nodes[i][0])} references).")
+                    print(f"Current path: {self.current_path}")
+                    print(f"Pruning node \"{self.in_memory_nodes[i][0].state}\" from memory.")
 
                     # remove from list
                     self.in_memory_nodes.pop(i)
+
                     break
 
         self.in_memory_nodes.append([node, message])
-
-    def is_part_of_path(self, node):
-        """
-        Check if the node is part of the possible optimal/final path.
-
-        """
-        return ((node.state,) in self.highlighted
-                and ((self.highlighted[(node.state,)] == Color.DARK_GREEN)
-                        or (self.highlighted[(node.state,)] == Color.GREEN)))
-
-    # # iterate backwards over optimal path and if iterator == node_to_be_checked, return True (part of optimal path)
-    # iterator = node
-    # while iterator.predecessor is not None:
-    #     if iterator == node_to_be_checked:
-    #         return True
-    #     iterator = iterator.predecessor
