@@ -29,6 +29,7 @@ def rbfs(problem: Problem, node: Node) -> (Node, int):
     if node.state == problem.goal_state:
 
         problem_state.current_path.append(node)
+        problem_state.node_added_in_memory(node)
         problem_state.set_node_goal()
         yield problem_state
 
@@ -49,9 +50,7 @@ def rbfs(problem: Problem, node: Node) -> (Node, int):
         if node.state == "Sibiu":
             pass
 
-        yield from get_successors(node, problem)
-
-        best_successor = node.best_successor
+        (best_successor, alternative) = yield from get_successors(node, problem)
 
         if best_successor.f_value > node.f_limit:
 
@@ -67,8 +66,6 @@ def rbfs(problem: Problem, node: Node) -> (Node, int):
 
             return (FAILURE, best_successor.f_value)
 
-        alternative = node.alternative_successor
-
         best_successor.f_limit = min(node.f_limit, alternative.f_value)
 
         # recursive call
@@ -81,7 +78,7 @@ def rbfs(problem: Problem, node: Node) -> (Node, int):
             return (result, node.f_limit)
 
 
-def get_successors(node: Node, problem: Problem) -> None:
+def get_successors(node: Node, problem: Problem) -> (Node, Node):
     """
     Set the best successor and the alternative (second-best) successor of the given node.
 
@@ -146,3 +143,5 @@ def get_successors(node: Node, problem: Problem) -> None:
         yield problem_state
         problem_state.node_added_in_memory(node.alternative_successor)
         yield problem_state
+
+    return (node.best_successor, node.alternative_successor)
