@@ -19,6 +19,9 @@ def recursive_best_first_search(problem: Problem) -> Node:
         predecessor=None,
         f_limit=INFINITY)
 
+    # clear attributes of the global problem state object
+    problem_state.clear()
+
     initial_node.f_value = initial_node.get_heuristic()
 
     return rbfs(problem,

@@ -5,7 +5,7 @@ from typing import Tuple, Dict, List
 from src.classes.node import Node
 
 class Color(Enum):
-    DARK_GREEN = '#194D33'
+    DARK_GREEN = '#187B49'
     GREEN = '#5E9325'
     ORANGE = '#C95603'
     GRAY = '#70716F'
@@ -112,7 +112,7 @@ class ProblemState:
 
         # recursively highlight the path from the initial node to the expanded node
         # in green
-        iterator = best_successor.predecessor.predecessor
+        iterator = best_successor.predecessor
         while iterator is not None and iterator.predecessor is not None:
             self.highlighted[(iterator.state,)] = Color.DARK_GREEN
             self.highlighted[(iterator.predecessor.state, iterator.state)] = Color.DARK_GREEN
@@ -180,3 +180,9 @@ class ProblemState:
                     break
 
         self.in_memory_nodes.append([node, message])
+
+    def clear(self):
+        self.highlighted = dict()
+        self.displayed_message = None
+        self.in_memory_nodes = []
+        self.current_path = []

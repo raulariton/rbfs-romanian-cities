@@ -155,6 +155,7 @@ class Visualizer:
             self.paused = False
             self.play_button.config(text="Pause")
             self.clear_highlights()
+            self.clear_nodes_in_memory()
             self.rbfs_generator = recursive_best_first_search(self.problem)
             self.animate(self.rbfs_generator)
 
@@ -233,7 +234,11 @@ class Visualizer:
         # determine the mid point of edge, where the weight label will be displayed
         mid_x, mid_y = (((self.node_positions[u]["x"] + self.node_positions[v]["x"]) // 2),
                         ((self.node_positions[u]["y"] + self.node_positions[v]["y"]) // 2))
-        self.draw_label_with_background(mid_x, mid_y, str(weight), tag="weight_label", font_size=6)
+        self.draw_label_with_background(mid_x, mid_y,
+                                        str(weight),
+                                        color="white",
+                                        tag="weight_label",
+                                        font_size=6)
 
     def draw_node(self, x, y, name, outline="black", width=3, tag="node"):
 
@@ -249,14 +254,14 @@ class Visualizer:
         )
         self.draw_label_with_background(x, y+30, name)
 
-    def draw_label_with_background(self, x, y, text, tag="label", font_size=10, padding=5):
+    def draw_label_with_background(self, x, y, text, color="", tag="label", font_size=10, padding=5):
         text_width = (font_size * len(text)) // 1.5
         text_height = font_size + 4
 
         self.graph_canvas.create_rectangle(
             x - text_width - padding, y - text_height - padding,
             x + text_width + padding, y + text_height + padding,
-            fill="white", outline="white",
+            fill=color, outline=color,
             tags=tag
         )
         self.graph_canvas.create_text(
@@ -305,15 +310,19 @@ class Visualizer:
                 self.highlight_node(node_state_tuple[0], color, tag="alternative_successor_highlight")
 
         # have node outlines on top
+        self.graph_canvas.tag_raise("label")
+
+        # have nodes on top
+        self.graph_canvas.tag_raise("node")
+
         self.graph_canvas.tag_raise("expanded_node_highlight")
         self.graph_canvas.tag_raise("successor_highlight")
         self.graph_canvas.tag_raise("no_successors_highlight")
         self.graph_canvas.tag_raise("best_successor_highlight")
         self.graph_canvas.tag_raise("alternative_successor_highlight")
 
-        # have edge and node labels on top
+        # have edge labels on top
         self.graph_canvas.tag_raise("weight_label")
-        self.graph_canvas.tag_raise("label")
 
         # update displayed message
         self.set_narration_text(problem_state.displayed_message)
@@ -396,3 +405,12 @@ class Visualizer:
         self.graph_canvas.delete("best_successor_edge_highlight")
         # the blue highlight of the alternative successor node
         self.graph_canvas.delete("alternative_successor_highlight")
+
+        # nodes on top
+        self.graph_canvas.tag_raise("node")
+
+    def clear_nodes_in_memory(self):
+        for widget in self.nodes_view_frame.winfo_children():
+            print(widget)
+            widget.destroy()
+        self.nodes_view_frame.update()
